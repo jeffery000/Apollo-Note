@@ -1,6 +1,6 @@
-# 主流 Agent IDE 工具对比（2026）
+# 主流 Agent IDE 与大模型对比（2026）
 
-> 文档整理时间：2026 年 5 月。Agent IDE 市场变化很快，定价、模型与功能以各厂商官网为准。
+> 文档整理时间：2026 年 5 月。Agent IDE 与大模型迭代极快，定价、基准分数与可用地区以各厂商官网为准。文中 benchmark 多为公开报道，**不同评测脚手架下分数不可直接横比**。
 
 ## 1. 什么是 Agent IDE
 
@@ -217,7 +217,242 @@
 
 ---
 
-## 4. 维度横向对比
+## 4. 大模型在 Agent 开发中的角色
+
+Agent IDE 本身不「思考」，真正驱动补全、规划与改代码的是底层 **大语言模型（LLM）**。同一款 Cursor，切换 Claude Opus 与 DeepSeek API，体验可差一个量级。
+
+选型时建议分清两层：
+
+| 层级 | 关注点 | 典型决策 |
+|------|--------|----------|
+| **工具层** | IDE/插件、索引、MCP、Git 集成 | Cursor vs Copilot vs Continue |
+| **模型层** | 推理、代码、成本、合规、是否可私有化 | Opus vs GPT-5.x vs Qwen/DeepSeek |
+
+下文第 5–7 节专门对比 **模型层**；第 8 节起仍为 IDE 工具横向对比。
+
+---
+
+## 5. 大模型一览（国际 + 国内）
+
+### 5.1 国际闭源（Frontier）
+
+| 模型 | 厂商 | 典型场景 | API/订阅量级（示意） | 开源 |
+|------|------|----------|----------------------|------|
+| **Claude Opus 4.7** | Anthropic | 复杂多文件工程、MCP 工具链 | 高端（如 $5/$25 per MTok 档） | 否 |
+| **Claude Sonnet 4.x** | Anthropic | 日常编码、性价比平衡 | 中档 | 否 |
+| **GPT-5.5 / GPT-5.4** | OpenAI | 终端 Agent、计算机使用、通用助手 | 中–高 | 否 |
+| **GPT-5.2-Codex** 等 | OpenAI | 代码专用变体 | 中档 | 否 |
+| **Gemini 3.1 Pro** | Google | 超长上下文、多模态、批量低成本 | 中档，长上下文性价比高 | 否 |
+| **Gemini 2.5 Flash** | Google | 高吞吐、低延迟 Agent 循环 | 极低 | 否 |
+| **Grok**（xAI） | xAI | 部分 IDE 可选 | 变动 | 否 |
+
+### 5.2 国内 / 开源权重（含可自部署）
+
+| 模型 | 厂商 | 典型场景 | 许可 / 部署 | 开源权重 |
+|------|------|----------|-------------|----------|
+| **DeepSeek-V3.2 / V4** | 深度求索 | 代码、数学、API 性价比 | MIT；API 为主，大模型自托管成本高 | 是 |
+| **Qwen3-Coder-Next / Qwen3.5+** | 阿里通义 | 企业规模化、长上下文、可本地 | Apache 2.0 / 部分 MIT | 是 |
+| **GLM-4.7 / GLM-5.x** | 智谱 | 代码生成、推理、Agent 工程 | MIT；API 常见，本地需大算力 | 是 |
+| **Kimi K2.5 / K2.6** | 月之暗面 | 长程 Agent、多子代理并行 | Modified MIT 等；API + 开源变体 | 部分 |
+| **MiniMax M2.5 / M2.7** | MiniMax | 高 QPS、Tool Calling、低成本 | MIT | 是 |
+| **豆包（Doubao）Seed 系列** | 字节跳动 | 应用侧、火山引擎生态 | 闭源 API 为主 | 否 |
+| **文心 ERNIE / 腾讯混元 / 华为盘古** 等 | 百度 / 腾讯 / 华为 | 国内合规、政企、云厂商绑定 | 多为闭源 + 私有化方案 | 部分 |
+
+> **说明**：国内「旗舰」命名随版本快速迭代（如 GLM-5.1、Kimi K2.6、Qwen 3.6 Plus），下表优缺点以 **能力取向** 为主，具体版本号请对照官网模型卡。
+
+---
+
+## 6. 分模型优缺点
+
+### 6.1 国际闭源
+
+#### Claude Opus 4.7 / Sonnet（Anthropic）
+
+| 优点 | 缺点 |
+|------|------|
+| 公开 SWE-bench Verified / Pro 上代码 Agent 表现领先（Opus 4.7 约 87.6% / 64.3% 量级） | 价格高于 Sonnet/Flash 类模型 |
+| MCP 工具编排（MCP-Atlas 等）口碑好，与 Claude Code 深度整合 | 国内直连需代理或第三方网关，合规需自评 |
+| 输出结构清晰，适合「改多文件 + 解释」 | 闭源，无法本地部署全权重 |
+| Sonnet 档适合日常开发，成本可控 | 额度与订阅规则随宿主（Cursor/Claude.ai）变化 |
+
+**适合**：复杂重构、Code Review、工具链重的 Agent；预算充足的团队主力模型。
+
+---
+
+#### GPT-5.5 / GPT-5.4 / Codex 系列（OpenAI）
+
+| 优点 | 缺点 |
+|------|------|
+| Terminal-Bench、OSWorld 等 **终端/计算机使用** 类基准常领先 | SWE-bench Pro 等纯软件工程修复常略逊于 Opus |
+| 与 ChatGPT、Codex 云端 Agent、Copilot 生态一致 | API 政策与数据使用条款需企业法务审查 |
+| 通用助手、文档、多模态能力强 | 国内访问与备案场景需单独方案 |
+| GPT-5.2-Codex 等针对代码优化 | 模型版本多，产品内「Auto」选型增加不可预测性 |
+
+**适合**：OpenAI 全家桶、云端委托编码、强依赖终端自动化的流水线。
+
+---
+
+#### Gemini 3.1 Pro / 2.5 Flash（Google）
+
+| 优点 | 缺点 |
+|------|------|
+| **百万级上下文**（部分 SKU）适合超大仓库扫描、文档+RAG | 纯代码修复峰值常略低于 Claude Opus |
+| Flash 系列单价极低、延迟短，适合高频 Agent 循环 | 企业隐私与数据驻留依赖 Google Cloud 条款 |
+| 多模态（含视频）在部分工作流领先 | 在 Cursor/Copilot 内体验取决于集成成熟度 |
+| GPQA 等推理基准第一梯队 | 国内开发者常用 API 中转，需关注稳定性 |
+
+**适合**：成本敏感的大规模调用、长文档/多模态分析、已用 GCP 的团队。
+
+---
+
+### 6.2 国内与开源权重
+
+#### DeepSeek（V3.2 / V4 及 Coder 变体）
+
+| 优点 | 缺点 |
+|------|------|
+| **API 单价极低**，适合高 volume 补全与 Agent | 全参数自托管需多卡集群，运维门槛高 |
+| 代码、数学、推理开源基准常逼近闭源旗舰 | 企业支持体系弱于国际三巨头 |
+| MIT 许可，社区生态活跃 | 部分区域政策与出口管制需合规评估 |
+| V4 等在 LiveCodeBench、SWE-bench 报道中具竞争力 | 与 IDE 原生集成度依赖第三方（Continue、OpenRouter 等） |
+
+**适合**：成本优先、国内 API、愿用 Continue/Ollama 网关的团队。
+
+---
+
+#### 通义 Qwen（Qwen3.5+ / Qwen3-Coder-Next 等）
+
+| 优点 | 缺点 |
+|------|------|
+| **Apache 2.0** 等友好许可，适合本地化与二次开发 | 旗舰 MoE 本地部署仍要可观 GPU |
+| Coder-Next 在 SWE-bench Pro 等难集上开源领先报道多 | 国际文档与英文社区弱于 Claude/GPT |
+| 上下文可达 256K–1M（版本相关），利于 monorepo | 与阿里云绑定时存在厂商锁定 |
+| 中文与多语言均衡 | 非阿里云环境需自行对接 API |
+
+**适合**：要开源权重、中文场景、企业混合云部署的国内团队。
+
+---
+
+#### 智谱 GLM（GLM-4.7 / GLM-5.x）
+
+| 优点 | 缺点 |
+|------|------|
+| SWE-bench Verified 开源阵营中分数常居前列（如 GLM-4.7 ~74% 报道） | 完整权重本地部署算力要求高 |
+| 推理与代码审查综合能力强 | API 注册与区域策略可能变动 |
+| 国内合规与政企案例较多 | 「最高 benchmark」在 SWE-bench Pro 上未必第一 |
+| 与智谱平台、部分 Agent 产品集成 | 国际开发者生态较小 |
+
+**适合**：国内编程 + 推理双高要求；可接受 API 或托管推理。
+
+---
+
+#### Kimi K2.5 / K2.6（月之暗面）
+
+| 优点 | 缺点 |
+|------|------|
+| **长程 Agent**：多子代理、数千步工具调用稳定性报道突出 | Modified MIT 等许可需细读商用条款 |
+| Terminal-Bench 2.0 等 Agent 基准表现强劲 | 价格高于 MiniMax/Qwen 档 |
+| 原生多模态（图/视频）利于 UI 复刻类任务 | 超大 MoE（如 1T 级）本地不现实 |
+| 开源权重 + API 双轨 | 依赖 Moonshot 服务时的可用性 |
+
+**适合**：复杂、长时间无人值守的编码 Agent；多模态需求。
+
+---
+
+#### MiniMax M2.5 / M2.7
+
+| 优点 | 缺点 |
+|------|------|
+| **延迟低、Tool Calling 精准**，适合高 QPS Agent | 极限复杂推理弱于 Kimi/GLM 旗舰 |
+| 激活参数相对小（如 10B 级），部署成本低于万亿 MoE | 品牌与全球评测声量小于 Qwen/DeepSeek |
+| API 输入单价极低（报道约 $0.15/M tokens 量级） | 超长上下文（如 1M）不如 Qwen Plus |
+| MIT 开源 | 英文代码风格偶发需 prompt 约束 |
+
+**适合**：批量 Code Review、简单 Agent 流水线、成本极度敏感。
+
+---
+
+#### 豆包 / 文心 / 混元 / 盘古等（闭源云平台）
+
+| 优点 | 缺点 |
+|------|------|
+| 国内 **备案、政企、云生态**（火山、百度云、腾讯云、华为云） | 权重多不开源，难以自有 GPU 全栈托管 |
+| 与应用层（小程序、办公、搜索）结合深 | 国际 SWE-bench 公开分数相对少 |
+| 混元等在部分开发者平台排名靠前（媒体报道） | 绑定单一云厂商 |
+| 适合「一句话生成应用」类产品化场景 | 接入 Cursor 等需兼容 OpenAI API 网关 |
+
+**适合**：业务已落在对应云、强合规国内部署、应用生成而非纯 IDE Agent。
+
+---
+
+### 6.3 其他值得关注的模型
+
+| 模型 | 优点摘要 | 缺点摘要 |
+|------|----------|----------|
+| **Mistral**（Large/Codestral） | 欧洲选项、API 稳定、Codestral 偏代码 | 国内访问与 Agent 生态小于三巨头 |
+| **Llama 4**（Meta） | 开源可商用变体、社区工具多 | 代码 Agent 峰值通常低于专用 Coder 模型 |
+| **o系列 / 推理特化**（OpenAI 等） | 复杂逻辑、规划 | 慢、贵，不适合高频补全 |
+| **本地小模型**（Qwen3.5 35B、Gemma、GPT-oss 等） | 零 API 费、隐私 | Agent 多文件成功率明显低于旗舰 |
+
+---
+
+## 7. 大模型维度对比
+
+### 7.1 编程与 Agent 能力（定性）
+
+| 能力维度 | 国际闭源领先倾向 | 国内/开源领先倾向 |
+|----------|------------------|-------------------|
+| 多文件 SWE 修复 | Claude Opus | GLM-4.7、Qwen3-Coder-Next、Kimi K2.6 |
+| 终端长会话 Agent | GPT-5.5 | Kimi K2.6、MiniMax M2.7 |
+| MCP / 多工具编排 | Claude Opus | Qwen（生态建设中） |
+| 超长上下文 | Gemini | Qwen 3.6 Plus（1M 报道） |
+| API 成本 | Gemini Flash | DeepSeek、MiniMax、Qwen |
+| 本地/私有化 | —（仅小模型或蒸馏） | Qwen、DeepSeek、MiniMax、部分 GLM |
+| 中文与本土合规 | — | 混元、文心、通义、智谱、Kimi |
+
+### 7.2 与 Agent IDE 的常见组合
+
+```mermaid
+flowchart TB
+  subgraph 国际栈
+    Cursor1[Cursor] --> Opus[Claude Opus/Sonnet]
+    Cursor1 --> GPT[GPT-5.x]
+    Copilot1[Copilot] --> GHModels[GitHub 托管多模型]
+    ClaudeCode1[Claude Code] --> Opus
+  end
+  subgraph 国内API栈
+    Cursor2[Cursor / Continue] --> DS[DeepSeek API]
+    Cursor2 --> QwenAPI[通义 API]
+    Cursor2 --> GLMAPI[智谱 API]
+  end
+  subgraph 私有化栈
+    Continue1[Continue / Ollama] --> QwenLocal[Qwen 开源权重]
+    Continue1 --> DSLocal[DeepSeek 权重]
+  end
+```
+
+### 7.3 大模型选型建议（按场景）
+
+1. **不计成本、要最强代码 Agent** → **Claude Opus 4.7**（配合 Claude Code / Cursor）。  
+2. **终端与云端计算机操作** → **GPT-5.5** + Codex / Copilot Cloud。  
+3. **百万 token 扫仓库、控成本** → **Gemini 3.1 Pro / Flash**。  
+4. **国内 API、极致性价比** → **DeepSeek** 或 **MiniMax**（高 QPS）。  
+5. **要开源可审计、能本地跑** → **Qwen3-Coder-Next** 或 **Qwen3.5**（视 GPU 而定）。  
+6. **长程自主 Agent（数小时）** → **Kimi K2.6** 或 **GLM-5.x**。  
+7. **政企仅允许国内云** → **混元 / 文心 / 通义企业版 / 智谱私有化**，经 **OpenAI 兼容网关** 接入 IDE。  
+8. **混合策略（常见）** → 日常 **Sonnet/Flash/DeepSeek**，攻坚 **Opus**，批量 **MiniMax/Qwen**。
+
+### 7.4 合规与数据（选型必问）
+
+| 问题 | 闭源国际 | 国内 API | 开源自托管 |
+|------|----------|----------|------------|
+| 代码是否用于训练 | 依厂商 DPA / 企业协议 | 依国内云协议 | 可完全离线 |
+| 数据出境 | 通常出境至美欧 | 可留在境内机房 | 取决于部署位置 |
+| 等保 / 行业监管 | 依赖国际认证 + 合同 | 云厂商资质较全 | 自建责任自负 |
+
+---
+
+## 8. Agent IDE 维度横向对比
 
 ### 4.1 架构形态
 
@@ -277,7 +512,7 @@ flowchart LR
 
 ---
 
-## 5. 选型建议（按场景）
+## 9. Agent IDE 选型建议（按场景）
 
 1. **默认「最强开箱 Agent IDE」** → **Cursor**  
    若团队已全员 VS Code 且预算允许，多数 2026 年评测将其列为综合体验第一梯队。
@@ -299,9 +534,13 @@ flowchart LR
 
 9. **不想换 IDE，但要聚合多个 Agent** → **Zed**（ACP + Terminal Threads）。
 
+**模型层（与上文第 7.3 节呼应）**：IDE 定好后，至少配置 **一个旗舰 + 一个经济型** API（例如 Opus + DeepSeek，或 Sonnet + MiniMax），避免所有任务都打最高档。
+
 ---
 
-## 6. 趋势与注意点（2026）
+## 10. 趋势与注意点（2026）
+
+### Agent IDE
 
 - **Agent 与 Copilot 边界模糊**：补全、聊天、Plan、Agent、Cloud Agent 往往在同一产品内分层售卖。  
 - **规则文件标准化**：`AGENTS.md`、`CLAUDE.md`、`.github/agents/` 等成为团队「可版本化」的 AI 行为配置。  
@@ -310,9 +549,19 @@ flowchart LR
 - **定价模型分化**：固定月费、积分制、API 透传、订阅内 Agent 额度（如 Claude 在部分宿主上的额度变化）需单独测算。  
 - **并购与更名**：Windsurf ↔ Cognition/OpenAI、Q Developer → Kiro 等，采购时建议看 **12–24 个月路线图** 而非仅当前功能表。
 
+### 大模型
+
+- **开源逼近闭源**：Qwen3-Coder-Next、GLM-4.7、DeepSeek-V3.2 等在 SWE-bench 上与一年前 Frontier 同档，但 **Pro/Verified 两套榜单排名可能相反**。  
+- **Coder 专用变体爆发**：通用 chat 模型与 Coder/Next/M2.7 等分工明确，Agent 场景应优先选 **代码优化型号**。  
+- **长程 Agent 成为卖点**：Kimi K2.6 等强调数小时、数千次工具调用，评测需看 Terminal-Bench 而非单次 HumanEval。  
+- **国内云模型与应用绑定**：混元、豆包等更偏「应用生成」，与 IDE 内 Agent 选型路径不同。  
+- **模型即政策**：训练数据、留存、是否允许中国区 API、是否可 BYOK，应写入采购 RFP。
+
 ---
 
-## 7. 参考链接
+## 11. 参考链接
+
+### Agent IDE
 
 - Cursor: https://cursor.com  
 - Windsurf: https://windsurf.com  
@@ -326,8 +575,25 @@ flowchart LR
 - Kiro: https://kiro.dev  
 - Replit Agent: https://replit.com  
 
+### 大模型（国际）
+
+- Anthropic Claude: https://www.anthropic.com/claude  
+- OpenAI: https://openai.com  
+- Google Gemini: https://ai.google.dev  
+
+### 大模型（国内 / 开源）
+
+- DeepSeek: https://www.deepseek.com  
+- 通义千问 Qwen: https://qwenlm.github.io  
+- 智谱 GLM: https://www.zhipuai.cn  
+- Kimi / Moonshot: https://www.moonshot.cn  
+- MiniMax: https://www.minimax.io  
+- 火山引擎豆包: https://www.volcengine.com/product/doubao  
+
 ---
 
-## 8. 免责声明
+## 12. 免责声明
 
-本文基于 2026 年 5 月前后的公开资料与行业评测整理，**非任何厂商的官方文档**。实际功能、价格、合规认证与可用地区请以各产品最新条款为准。建议在试点阶段用同一套真实任务（如「跨 5 文件重构 + 补测试 + 开 PR」）对 2–3 款候选工具做两周对比，再决定团队标准工具链。
+本文基于 2026 年 5 月前后的公开资料与行业评测整理，**非任何厂商的官方文档**。实际功能、价格、合规认证、benchmark 分数与可用地区请以各产品最新条款及模型卡为准；不同评测的脚手架、turn 上限、是否允许 hack 均会影响分数。
+
+建议在试点阶段用同一套真实任务（如「跨 5 文件重构 + 补测试 + 开 PR」）对 **2–3 款 IDE** 与 **2–3 款主力模型** 做组合测试，再固化团队标准工具链。
